@@ -1,76 +1,87 @@
+// server.js
+// where your node app starts
 
 // init project
-const express = require('express');
-const app = express();
-const fetch = require('cross-fetch');
-const cors = require('cors');
+var express = require('express');
+// setup a new database
+// persisted using async file storage
+// Security note: the database is saved to the file `db.json` on the local filesystem.
+// It's deliberately placed in the `.data` directory which doesn't get copied if someone remixes the project.
+var low = require('lowdb')
+var FileSync = require('lowdb/adapters/FileSync')
+var adapter = new FileSync('.data/db.json')
+var db = low(adapter)
+var app = express();
 
-// we've started you off with Express, 
-// but feel free to use whatever libs or frameworks you'd like through `package.json`.
+// default user list
+db.defaults({ users: [
+      {"firstName":"John", "lastName":"Hancock"},
+      {"firstName":"Liz",  "lastName":"Smith"},
+      {"firstName":"Ahmed","lastName":"Khan"}
+    ]
+  }).write();
 
-app.use(cors());
-app.use(express.urlencoded({ extended: true }));
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
 
 // http://expressjs.com/en/starter/basic-routing.html
-app.get('/streams', (request, response) => {
-  const guys =  ["ESL_SC2", 
-                 "OgamingSC2", 
-                 "cretetion", 
-                 "freecodecamp", 
-                 "storbeck", 
-                 "habathcx", 
-                 "RobotCaleb", 
-                 "noobs2ninjas"];
-
- let arr = [];
-  const twitch = () => {
-      for(let key of guys){
-      const promises = fetch(`https://wind-bow.glitch.me/twitch-api/streams/${key}`)
-                  .then(res => res.json())
-                  .then(result => result)
-                  .catch(err => console.error(err));
-       arr.push(promises);
-      }
-    Promise.all(arr).then(function(values) {
-      response.send(values);
-    });
-    
-  }
-  twitch();
-  
+app.get("/", function (request, response) {
+  response.sendFile(__dirname + '/views/index.html');
 });
 
-app.get('/channels', (request, response) => {
-  const guys =  ["ESL_SC2", 
-                 "OgamingSC2", 
-                 "cretetion", 
-                 "freecodecamp", 
-                 "storbeck", 
-                 "habathcx", 
-                 "RobotCaleb", 
-                 "noobs2ninjas"];
+app.get("/users", function (request, response) {
+  var dbUsers=[];
+  var users = db.get('users').value() // Find all users in the collection
+  users.forEach(function(user) {
+    dbUsers.push([user.firstName,user.lastName]); // adds their info to the dbUsers value
+  });
+  response.send(dbUsers); // sends dbUsers back to the page
+});
 
- let arr = [];
-  const twitch = () => {
-      for(let key of guys){
-      const promises = fetch(`https://wind-bow.glitch.me/twitch-api/channels/${key}`)
-                  .then(res => res.json())
-                  .then(result => result)
-                  .catch(err => console.error(err));
-       arr.push(promises);
-      }
-    Promise.all(arr).then(function(values) {
-      response.send(values);
-    });
-    
-  }
-  twitch();
+// creates a new entry in the users collection with the submitted values
+app.post("/users", function (request, response) {
+  db.get('users')
+    .push({ firstName: request.query.fName, lastName: request.query.lName })
+    .write()
+  console.log("New user inserted in the database");
+  response.sendStatus(200);
+});
+
+// removes entries from users and populates it with default users
+app.get("/reset", function (request, response) {
+  // removes all entries from the collection
+  db.get('users')
+  .remove()
+  .write()
+  console.log("Database cleared");
   
+  // default users inserted in the database
+  var users= [
+      {"firstName":"John", "lastName":"Hancock"},
+      {"firstName":"Liz",  "lastName":"Smith"},
+      {"firstName":"Ahmed","lastName":"Khan"}
+  ];
+  
+  users.forEach(function(user){
+    db.get('users')
+      .push({ firstName: user.firstName, lastName: user.lastName })
+      .write()
+  });
+  console.log("Default users added");
+  response.redirect("/");
+});
+
+// removes all entries from the collection
+app.get("/clear", function (request, response) {
+  // removes all entries from the collection
+  db.get('users')
+  .remove()
+  .write()
+  console.log("Database cleared");
+  response.redirect("/");
 });
 
 // listen for requests :)
-const listener = app.listen(process.env.PORT, function() {
+var listener = app.listen(process.env.PORT, function () {
   console.log('Your app is listening on port ' + listener.address().port);
 });
