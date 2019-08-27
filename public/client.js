@@ -5,21 +5,22 @@
 // add other scripts at the bottom of index.html
 
 $(function() {
-  $.get('/users', function(users) {
-    users.forEach(function(user) {
-      $('<li></li>').text(user[0] + " " + user[1]).appendTo('ul#users');
+  console.log('hello world :o');
+  
+  $.get('/dreams', function(dreams) {
+    dreams.forEach(function(dream) {
+      $('<li></li>').text(dream).appendTo('ul#dreams');
     });
   });
 
   $('form').submit(function(event) {
     event.preventDefault();
-    var fName = $('input#fName').val();
-    var lName = $('input#lName').val();
-    $.post('/users?' + $.param({fName:fName, lName:lName}), function() {
-      $('<li></li>').text(fName + " " + lName).appendTo('ul#users');
-      $('input#fName').val('');
-      $('input#lName').val('');
+    var dream = $('input').val();
+    $.post('/db?' + $.param({dream: dream}), function() {
+      $('<li></li>').text(dream).appendTo('ul#dreams');
+      $('input').val('');
       $('input').focus();
     });
   });
+
 });
